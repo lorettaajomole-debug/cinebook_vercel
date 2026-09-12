@@ -12,35 +12,19 @@
 
 ## 👥 Multi-Agent Architecture (Team CineBook)
 
-```mermaid
-flowchart LR
-    subgraph A1["Agent 1: App Agent"]
-        UI["Cinematic UI & App Router"]
-        SEAT["Interactive Seat Map"]
-        PAY["Idempotent Checkout"]
-        QR["Digital QR Tickets"]
-        ADM["Admin Operations Portal"]
-    end
-
-    subgraph A2["Agent 2: Database Engine Agent"]
-        SCHEM["14 PostgreSQL Tables"]
-        TX["Row-Level Locks FOR UPDATE"]
-        HOLD["10-Min Temporary Holds"]
-        CRON["Idempotent Hold Cleanup"]
-    end
-
-    subgraph A3["Agent 3: QA Agent"]
-        TEST_AUTH["Auth & JWT Verification"]
-        TEST_CONC["Concurrency Collision Tests"]
-        TEST_EXP["Hold Expiration Tests"]
-        TEST_SEC["Security Isolation Tests"]
-    end
-
-    UI --> TX
-    SEAT --> HOLD
-    PAY --> TX
-    CRON --> SEAT
-    TEST_CONC -.-> TX
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 TEAM CINEBOOK ARCHITECTURE                              │
+├──────────────────────────────┬──────────────────────────────┬───────────────────────────┤
+│    AGENT 1: APP AGENT        │  AGENT 2: DATABASE ENGINE    │    AGENT 3: QA AGENT      │
+├──────────────────────────────┼──────────────────────────────┼───────────────────────────┤
+│ • Cinematic Dark Theme UI    │ • 14 PostgreSQL DB Tables    │ • Auth & Session Tests    │
+│ • Real-Time Seat Selection   │ • Row-Level Locks FOR UPDATE │ • Concurrency Race Tests  │
+│ • 10-Min Hold Reservation    │ • Atomic Hold Transactions   │ • Hold Expiration Tests   │
+│ • Multi-Method Checkout      │ • Idempotent Cleanup Worker  │ • Payment Idempotency     │
+│ • Digital Pass with Live QR  │ • 120 Scheduled Showtimes    │ • Tenant Isolation Tests  │
+│ • Admin Control Centre       │ • 7,680 Seat Inventories     │ • Next.js Build Verifier  │
+└──────────────────────────────┴──────────────────────────────┴───────────────────────────┘
 ```
 
 ### 1. App Agent (Agent 1)
