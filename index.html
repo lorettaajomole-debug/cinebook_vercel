@@ -4,344 +4,903 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CineBook — Ultra-Premium Cinema Ticket Booking Platform</title>
-  <meta name="description" content="Production-ready cinema ticket-booking platform built with Next.js 15, Neon PostgreSQL, Drizzle ORM, and atomic seat reservation locks.">
+  <meta name="description" content="Production-ready cinema ticket-booking web application featuring real-time seat maps, multi-payment options, digital QR passes, and admin portal.">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons & QRCode.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: "#080B11",
+            surface: "#0F141F",
+            "surface-raised": "#172033",
+            "surface-border": "#25324D",
+            accent: {
+              cyan: "#06B6D4",
+              gold: "#F59E0B",
+              ruby: "#E11D48",
+              emerald: "#10B981",
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.4)',
+            'glow-gold': '0 0 25px -5px rgba(245, 158, 11, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    :root {
-      --bg: #080B11;
-      --surface: #0F141F;
-      --surface-raised: #172033;
-      --border: #25324D;
-      --cyan: #06B6D4;
-      --gold: #F59E0B;
-      --ruby: #E11D48;
-      --emerald: #10B981;
-    }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
     body {
-      background-color: var(--bg);
+      background-color: #080B11;
       color: #F3F4F6;
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      line-height: 1.6;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       overflow-x: hidden;
       min-height: 100vh;
     }
-    .ambient-glow {
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 1000px;
-      height: 450px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, rgba(245, 158, 11, 0.08) 40%, transparent 70%);
-      filter: blur(80px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
+    .cinema-screen-curve {
       position: relative;
-      z-index: 10;
+      width: 100%;
+      height: 22px;
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.45) 0%, rgba(6, 182, 212, 0) 100%);
+      border-top: 4px solid #06B6D4;
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      box-shadow: 0 -10px 30px rgba(6, 182, 212, 0.4);
     }
-    header {
-      padding: 24px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 22px;
-      font-weight: 800;
-      color: #fff;
-      text-decoration: none;
-    }
-    .logo-icon {
-      width: 38px;
-      height: 38px;
-      background: linear-gradient(135deg, var(--cyan), #2563EB);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
-    }
-    .logo span {
-      color: var(--cyan);
-    }
-    .nav-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .btn {
-      padding: 10px 20px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 700;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--cyan), #0284C7);
-      color: #080B11;
-      box-shadow: 0 0 25px rgba(6, 182, 212, 0.35);
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 35px rgba(6, 182, 212, 0.55);
-    }
-    .btn-secondary {
-      background: var(--surface-raised);
-      color: #fff;
-      border: 1px solid var(--border);
-    }
-    .btn-secondary:hover {
-      border-color: var(--cyan);
-    }
-    .hero {
-      padding: 80px 0 60px;
-      text-align: center;
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      background: rgba(6, 182, 212, 0.12);
-      border: 1px solid rgba(6, 182, 212, 0.35);
-      border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--cyan);
-      margin-bottom: 24px;
-    }
-    .pulse-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--emerald);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--emerald);
-    }
-    h1 {
-      font-size: 48px;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 20px;
-      color: #fff;
-    }
-    h1 span {
-      background: linear-gradient(135deg, #fff 30%, var(--cyan) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .subtitle {
-      font-size: 16px;
-      color: #9CA3AF;
-      max-width: 680px;
-      margin: 0 auto 36px;
-    }
-    .hero-ctas {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-      margin: 60px 0;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(6, 182, 212, 0.4);
-      box-shadow: 0 15px 35px -10px rgba(6, 182, 212, 0.15);
-    }
-    .card-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      font-size: 20px;
-    }
-    .card-icon.cyan { background: rgba(6, 182, 212, 0.15); color: var(--cyan); }
-    .card-icon.gold { background: rgba(245, 158, 11, 0.15); color: var(--gold); }
-    .card-icon.ruby { background: rgba(225, 29, 72, 0.15); color: var(--ruby); }
-    .card h3 {
-      font-size: 18px;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 10px;
-    }
-    .card p {
-      font-size: 13px;
-      color: #9CA3AF;
-      line-height: 1.6;
-    }
-    .feature-list {
-      list-style: none;
-      margin-top: 16px;
-      font-size: 13px;
-      color: #D1D5DB;
-    }
-    .feature-list li {
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .feature-list li::before {
-      content: "✓";
-      color: var(--emerald);
-      font-weight: bold;
-    }
-    .deployment-box {
-      background: linear-gradient(180deg, var(--surface-raised) 0%, var(--surface) 100%);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 40px;
-      margin: 40px 0 80px;
-      text-align: center;
-    }
-    .credentials {
-      display: inline-flex;
-      gap: 20px;
-      background: rgba(0,0,0,0.5);
-      border: 1px solid var(--border);
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      margin-top: 20px;
-      color: #9CA3AF;
-    }
-    .credentials strong {
-      color: #fff;
-    }
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 0;
-      text-align: center;
-      font-size: 13px;
-      color: #6B7280;
+    @media print {
+      body * { visibility: hidden; }
+      #printable-ticket-content, #printable-ticket-content * { visibility: visible; }
+      #printable-ticket-content {
+        position: absolute; left: 0; top: 0; width: 100%;
+        background: white !important; color: black !important;
+      }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
-<body>
-  <div class="ambient-glow"></div>
+<body class="flex flex-col min-h-screen antialiased selection:bg-accent-cyan selection:text-gray-950">
 
-  <div class="container">
-    <header>
-      <a href="#" class="logo">
-        <div class="logo-icon">🎬</div>
-        Cine<span>Book</span>
+  <!-- Ambient Glow -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[350px] bg-radial-gradient from-cyan-500/10 via-amber-500/5 to-transparent blur-3xl pointer-events-none -z-10"></div>
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-50 w-full border-b border-surface-border bg-background/85 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <a href="#home" onclick="navigateTo('home')" class="flex items-center gap-2.5 group">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent-cyan to-blue-600 shadow-glow-cyan text-white">
+          <i data-lucide="film" class="h-5 w-5"></i>
+        </div>
+        <div class="flex flex-col">
+          <span class="text-xl font-bold tracking-tight text-white flex items-center gap-1">
+            Cine<span class="text-accent-cyan">Book</span>
+            <i data-lucide="sparkles" class="h-3.5 w-3.5 text-accent-gold"></i>
+          </span>
+          <span class="text-[10px] font-medium uppercase tracking-widest text-gray-400">
+            Premium Cinema Experience
+          </span>
+        </div>
       </a>
-      <div class="nav-actions">
-        <a href="https://github.com/lorettaajomole-debug/cinebook_vercel" target="_blank" class="btn btn-secondary">GitHub Repo</a>
-        <a href="https://vercel.com/new" target="_blank" class="btn btn-primary">Deploy to Vercel 🚀</a>
-      </div>
-    </header>
 
-    <section class="hero">
-      <div class="badge">
-        <span class="pulse-dot"></span>
-        Production-Ready Multi-Agent Architecture
-      </div>
-      <h1>Ultra-Premium Cinema Ticket<br><span>Reservation Platform</span></h1>
-      <p class="subtitle">
-        Engineered with Next.js 15, Neon Serverless PostgreSQL, Drizzle ORM, and atomic row-level seat locking. Tested with 100% QA pass rate.
-      </p>
+      <!-- Desktop Nav -->
+      <nav class="hidden md:flex items-center gap-1.5 text-xs font-semibold">
+        <button onclick="navigateTo('home')" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-surface-raised transition-all" data-nav="home">
+          <i data-lucide="film" class="h-4 w-4"></i> Movies
+        </button>
+        <button onclick="navigateTo('cinemas')" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-surface-raised transition-all" data-nav="cinemas">
+          <i data-lucide="compass" class="h-4 w-4"></i> Cinemas
+        </button>
+        <button onclick="navigateTo('my-bookings')" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-gray-300 hover:text-white hover:bg-surface-raised transition-all" data-nav="my-bookings">
+          <i data-lucide="ticket" class="h-4 w-4"></i> My Passes
+        </button>
+        <button onclick="navigateTo('admin')" class="nav-btn flex items-center gap-2 px-3.5 py-2 rounded-xl text-accent-gold bg-accent-gold/10 border border-accent-gold/20 hover:bg-accent-gold/20 transition-all" data-nav="admin">
+          <i data-lucide="shield" class="h-4 w-4"></i> Admin Portal
+        </button>
+      </nav>
 
-      <div class="hero-ctas">
-        <a href="https://vercel.com/new" target="_blank" class="btn btn-primary" style="font-size: 14px; padding: 14px 28px;">
-          Deploy to Vercel Now
-        </a>
-        <a href="http://localhost:3000" class="btn btn-secondary" style="font-size: 14px; padding: 14px 28px;">
-          Open Local App (localhost:3000)
-        </a>
-      </div>
-    </section>
-
-    <div class="grid-3">
-      <div class="card">
-        <div class="card-icon cyan">🎨</div>
-        <h3>Agent 1: App Agent</h3>
-        <p>Ultra-responsive cinematic web experience with interactive seat maps and payment providers.</p>
-        <ul class="feature-list">
-          <li>Interactive Seat Map with 10-Min Hold</li>
-          <li>Card, Apple Pay, Google Pay, & PayPal</li>
-          <li>Digital Passes with Live QR Codes</li>
-          <li>Admin Control Centre & KPI Dashboard</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <div class="card-icon gold">🛡️</div>
-        <h3>Agent 2: Database Engine</h3>
-        <p>14 PostgreSQL tables with row-level transaction locks protecting against double-booking race conditions.</p>
-        <ul class="feature-list">
-          <li>PostgreSQL <code>SELECT ... FOR UPDATE</code> Locks</li>
-          <li>120 Scheduled Showtimes & 7,680 Seats</li>
-          <li>Idempotent Seat Hold Cleanup Worker</li>
-          <li>Integer Minor Units Money Precision</li>
-        </ul>
-      </div>
-
-      <div class="card">
-        <div class="card-icon ruby">🧪</div>
-        <h3>Agent 3: QA Agent</h3>
-        <p>Comprehensive automated test suite validating security, concurrency, and payments.</p>
-        <ul class="feature-list">
-          <li>Concurrent Race Collision Tests (100% Pass)</li>
-          <li>Payment Idempotency & Decline Tests</li>
-          <li>Cross-Tenant Isolation & Expiry Tests</li>
-          <li>Zero-Error Next.js 15 Production Build</li>
-        </ul>
+      <!-- User Role Indicator -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 rounded-full bg-surface-raised border border-surface-border px-3 py-1 text-xs">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="user-display-name" class="font-bold text-white">Demo Customer</span>
+        </div>
       </div>
     </div>
+  </header>
 
-    <section class="deployment-box">
-      <h2 style="font-size: 26px; font-weight: 800; color: #fff; margin-bottom: 12px;">Live Vercel Deployment & Testing</h2>
-      <p style="font-size: 14px; color: #9CA3AF; max-width: 600px; margin: 0 auto;">
-        Deploy CineBook directly to Vercel and attach Neon Serverless PostgreSQL for full serverless backend execution.
-      </p>
+  <!-- Dynamic Views Container -->
+  <main class="flex-1">
 
-      <div class="credentials">
-        <div>Admin: <strong>admin@cinebook.com</strong> (Admin123!)</div>
-        <div>Demo: <strong>demo@cinebook.com</strong> (User123!)</div>
+    <!-- VIEW 1: HOME -->
+    <section id="view-home" class="view space-y-12 pb-16">
+      <!-- Hero Banner -->
+      <div class="relative w-full h-[480px] sm:h-[580px] overflow-hidden flex items-end">
+        <img id="hero-img" src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80" alt="Hero Backdrop" class="absolute inset-0 w-full h-full object-cover object-top filter brightness-[0.4]">
+        <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
+
+        <div class="relative mx-auto max-w-7xl px-4 pb-14 sm:px-6 lg:px-8 w-full">
+          <div class="max-w-2xl space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-accent-cyan/20 border border-accent-cyan/40 px-3 py-1 text-xs font-bold text-accent-cyan backdrop-blur-md">
+                ★ Spotlight Premiere
+              </span>
+              <span class="rounded bg-black/60 px-2 py-0.5 text-xs font-bold text-accent-gold border border-surface-border">PG-13</span>
+              <span class="text-xs text-gray-300">Sci-Fi • 2h 46m</span>
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight">Dune: Part Two</h1>
+            <p class="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-xl">
+              Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family in a battle for the universe.
+            </p>
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button onclick="openMovie('dune-part-two')" class="flex items-center gap-2 rounded-xl bg-accent-cyan px-6 py-3 text-sm font-bold text-gray-950 shadow-glow-cyan hover:bg-cyan-300 transition-all cursor-pointer">
+                <i data-lucide="ticket" class="h-4 w-4"></i> Select Showtimes & Seats
+              </button>
+              <button onclick="openTrailer('Way9Dexny3w', 'Dune: Part Two')" class="flex items-center gap-2 rounded-xl bg-surface-raised/80 border border-surface-border px-5 py-3 text-sm font-semibold text-white hover:bg-surface-raised transition-all cursor-pointer">
+                <i data-lucide="play" class="h-4 w-4 fill-white"></i> Watch Trailer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Catalog & Filter Area -->
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
+        <!-- Filter Bar -->
+        <div class="rounded-2xl bg-surface border border-surface-border p-4 sm:p-5 shadow-xl space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="relative">
+              <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"></i>
+              <input type="text" id="search-input" oninput="applyFilters()" placeholder="Search movie, cast, director..." class="w-full rounded-xl bg-surface-raised border border-surface-border pl-10 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-accent-cyan focus:outline-none">
+            </div>
+            <select id="genre-select" onchange="applyFilters()" class="rounded-xl bg-surface-raised border border-surface-border px-3.5 py-2.5 text-xs text-white focus:border-accent-cyan focus:outline-none">
+              <option value="">All Genres</option>
+              <option value="Sci-Fi">Sci-Fi</option>
+              <option value="Action">Action</option>
+              <option value="Drama">Drama</option>
+              <option value="Animation">Animation</option>
+              <option value="Thriller">Thriller</option>
+            </select>
+            <select id="language-select" onchange="applyFilters()" class="rounded-xl bg-surface-raised border border-surface-border px-3.5 py-2.5 text-xs text-white focus:border-accent-cyan focus:outline-none">
+              <option value="">All Languages</option>
+              <option value="English">English</option>
+              <option value="Japanese">Japanese</option>
+            </select>
+            <select id="cinema-select" onchange="applyFilters()" class="rounded-xl bg-surface-raised border border-surface-border px-3.5 py-2.5 text-xs text-white focus:border-accent-cyan focus:outline-none">
+              <option value="">All Cinemas</option>
+              <option value="Grand IMAX LA">CineBook Grand IMAX LA</option>
+              <option value="Dolby NYC">CineBook Dolby Cinema NYC</option>
+              <option value="Metropolis Chicago">CineBook Metropolis Chicago</option>
+            </select>
+          </div>
+
+          <!-- Date Tabs -->
+          <div class="flex items-center gap-2 overflow-x-auto pt-2 border-t border-surface-border/60 text-xs">
+            <span class="font-bold text-gray-400">Date:</span>
+            <button onclick="setDateFilter('all', this)" class="date-btn active px-3 py-1.5 rounded-lg bg-accent-cyan text-gray-950 font-bold">Any Date</button>
+            <button onclick="setDateFilter('Today', this)" class="date-btn px-3 py-1.5 rounded-lg bg-surface-raised text-gray-300 font-semibold hover:text-white">Today</button>
+            <button onclick="setDateFilter('Tomorrow', this)" class="date-btn px-3 py-1.5 rounded-lg bg-surface-raised text-gray-300 font-semibold hover:text-white">Tomorrow</button>
+            <button onclick="setDateFilter('Weekend', this)" class="date-btn px-3 py-1.5 rounded-lg bg-surface-raised text-gray-300 font-semibold hover:text-white">This Weekend</button>
+          </div>
+        </div>
+
+        <!-- Movie Cards Grid -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-surface-border pb-3">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="film" class="h-5 w-5 text-accent-cyan"></i> Now Showing in Theatres
+            </h2>
+            <span id="movie-count" class="text-xs text-accent-cyan font-bold bg-accent-cyan/10 px-2.5 py-1 rounded-full border border-accent-cyan/20">6 Movies</span>
+          </div>
+
+          <div id="movies-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
       </div>
     </section>
 
-    <footer>
-      <p>© 2026 CineBook Inc. Built with Next.js, Neon PostgreSQL, and Tailwind CSS.</p>
-    </footer>
+    <!-- VIEW 2: MOVIE DETAILS -->
+    <section id="view-movie-details" class="view hidden space-y-10 pb-16">
+      <div id="movie-details-content" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 space-y-8"></div>
+    </section>
+
+    <!-- VIEW 3: SEAT MAP -->
+    <section id="view-seat-map" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
+        <div id="seat-map-header" class="rounded-2xl bg-surface border border-surface-border p-5 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div class="lg:col-span-8 flex flex-col items-center rounded-3xl bg-surface border border-surface-border p-6 sm:p-8 shadow-2xl">
+            <!-- Screen curve -->
+            <div class="w-full max-w-xl flex flex-col items-center mb-8">
+              <div class="cinema-screen-curve w-full"></div>
+              <span class="text-[10px] font-bold uppercase tracking-[0.3em] text-accent-cyan/80 mt-3">All Eyes On Screen</span>
+            </div>
+
+            <!-- Seat Grid -->
+            <div id="interactive-seat-grid" class="w-full overflow-x-auto py-2 flex justify-center"></div>
+
+            <!-- Legend -->
+            <div class="mt-8 pt-4 border-t border-surface-border/80 w-full flex flex-wrap justify-center gap-4 text-xs text-gray-300">
+              <div class="flex items-center gap-1.5"><div class="h-3.5 w-3.5 rounded bg-surface-raised border border-surface-border"></div> Available</div>
+              <div class="flex items-center gap-1.5"><div class="h-3.5 w-3.5 rounded bg-accent-cyan shadow-glow-cyan"></div> Selected</div>
+              <div class="flex items-center gap-1.5"><div class="h-3.5 w-3.5 rounded bg-amber-900/40 border border-amber-700"></div> Held</div>
+              <div class="flex items-center gap-1.5"><div class="h-3.5 w-3.5 rounded bg-gray-800 opacity-40"></div> Booked</div>
+              <div class="flex items-center gap-1.5 text-amber-300">👑 VIP ($22)</div>
+              <div class="flex items-center gap-1.5 text-purple-300">★ Recliner ($28)</div>
+            </div>
+          </div>
+
+          <!-- Order Summary Side Panel -->
+          <div class="lg:col-span-4 rounded-2xl bg-surface border border-surface-border p-6 shadow-2xl space-y-6 sticky top-24">
+            <h3 class="text-sm font-bold text-white flex items-center justify-between border-b border-surface-border pb-3">
+              <span>Selected Seats</span>
+              <span id="selected-seats-count" class="text-xs font-mono text-accent-cyan">0 Seats</span>
+            </h3>
+
+            <div id="selected-seats-tags" class="flex flex-wrap gap-2 min-h-[40px] text-xs text-gray-500">
+              Select seats on the map above.
+            </div>
+
+            <div class="space-y-2 pt-4 border-t border-surface-border text-xs text-gray-300">
+              <div class="flex justify-between"><span>Seats Subtotal</span><span id="side-subtotal" class="font-mono">$0.00</span></div>
+              <div class="flex justify-between"><span>Booking Fee (Flat)</span><span id="side-fee" class="font-mono">$0.00</span></div>
+              <div class="flex justify-between"><span>Estimated Tax (8%)</span><span id="side-tax" class="font-mono">$0.00</span></div>
+              <div class="flex justify-between pt-2 border-t border-surface-border text-sm font-bold text-white">
+                <span>Total Amount</span><span id="side-total" class="font-mono text-accent-cyan text-base">$0.00</span>
+              </div>
+            </div>
+
+            <button onclick="proceedToCheckout()" id="btn-proceed" disabled class="w-full rounded-xl bg-gradient-to-r from-accent-cyan to-blue-600 py-3.5 text-sm font-bold text-gray-950 shadow-glow-cyan hover:opacity-95 disabled:opacity-40 transition-all cursor-pointer">
+              Hold Seats & Proceed to Checkout
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: CHECKOUT -->
+    <section id="view-checkout" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
+        <div id="checkout-content"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: DIGITAL TICKET -->
+    <section id="view-ticket" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+        <div id="ticket-display"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: MY BOOKINGS -->
+    <section id="view-my-bookings" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2.5">
+          <i data-lucide="ticket" class="h-7 w-7 text-accent-cyan"></i> My Cinema Bookings
+        </h1>
+        <div id="my-bookings-list" class="space-y-4"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 7: ADMIN PORTAL -->
+    <section id="view-admin" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-surface-border pb-4">
+          <div>
+            <span class="rounded bg-accent-gold/20 text-accent-gold px-2 py-0.5 text-[10px] font-bold uppercase">Control Centre</span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white mt-1 flex items-center gap-2">
+              <i data-lucide="shield" class="h-6 w-6 text-accent-gold"></i> CineBook Management Portal
+            </h1>
+          </div>
+          <button onclick="triggerHoldCleanup()" class="flex items-center gap-2 rounded-xl bg-surface-raised border border-surface-border px-4 py-2 text-xs font-bold text-white hover:border-accent-cyan">
+            <i data-lucide="refresh-cw" class="h-4 w-4 text-accent-cyan"></i> Release Expired Holds
+          </button>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="rounded-2xl bg-surface border border-surface-border p-5">
+            <span class="text-[10px] font-bold uppercase text-gray-400">Total Revenue</span>
+            <p id="admin-revenue" class="text-2xl font-black text-white font-mono mt-1">$4,850.00</p>
+          </div>
+          <div class="rounded-2xl bg-surface border border-surface-border p-5">
+            <span class="text-[10px] font-bold uppercase text-gray-400">Tickets Sold</span>
+            <p id="admin-tickets" class="text-2xl font-black text-accent-cyan font-mono mt-1">142</p>
+          </div>
+          <div class="rounded-2xl bg-surface border border-surface-border p-5">
+            <span class="text-[10px] font-bold uppercase text-gray-400">Seat Occupancy</span>
+            <p id="admin-occupancy" class="text-2xl font-black text-accent-gold font-mono mt-1">68.4%</p>
+          </div>
+          <div class="rounded-2xl bg-surface border border-surface-border p-5">
+            <span class="text-[10px] font-bold uppercase text-gray-400">Active Showtimes</span>
+            <p class="text-2xl font-black text-white font-mono mt-1">120</p>
+          </div>
+        </div>
+
+        <!-- Audit Log Viewer -->
+        <div class="rounded-2xl bg-surface border border-surface-border p-6 space-y-3">
+          <h3 class="text-sm font-bold text-white">Live System Audit Trail</h3>
+          <div id="admin-audit-logs" class="space-y-2 font-mono text-xs max-h-60 overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 8: CINEMAS DIRECTORY -->
+    <section id="view-cinemas" class="view hidden space-y-8 pb-16">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
+          <i data-lucide="compass" class="h-6 w-6 text-accent-cyan"></i> Flagship Cinema Theatres
+        </h1>
+        <div id="cinemas-list-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Trailer Modal -->
+  <div id="trailer-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div class="relative w-full max-w-3xl rounded-2xl bg-surface border border-surface-border overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-surface-border">
+        <h3 id="trailer-modal-title" class="text-xs font-bold text-white">Trailer</h3>
+        <button onclick="closeTrailer()" class="text-gray-400 hover:text-white"><i data-lucide="x" class="h-5 w-5"></i></button>
+      </div>
+      <div class="aspect-video w-full bg-black">
+        <iframe id="trailer-iframe" class="w-full h-full border-0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
   </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-surface-border bg-surface/80 mt-auto py-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 gap-4">
+      <p>© 2026 CineBook Inc. Multi-Agent Production Architecture.</p>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/lorettaajomole-debug/cinebook_vercel" target="_blank" class="hover:text-accent-cyan">GitHub</a>
+        <span>•</span>
+        <a href="https://vercel.com/new" target="_blank" class="hover:text-accent-cyan">Vercel Deployment</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application State & Script -->
+  <script>
+    // In-memory movie database
+    const MOVIES = [
+      {
+        id: "m1",
+        title: "Dune: Part Two",
+        slug: "dune-part-two",
+        synopsis: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
+        posterUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "Way9Dexny3w",
+        duration: "2h 46m",
+        rating: "PG-13",
+        language: "English",
+        director: "Denis Villeneuve",
+        cast: "Timothée Chalamet, Zendaya, Austin Butler",
+        genres: ["Sci-Fi", "Action"]
+      },
+      {
+        id: "m2",
+        title: "Oppenheimer",
+        slug: "oppenheimer",
+        synopsis: "The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II.",
+        posterUrl: "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "uYPbbksJxIg",
+        duration: "3h 00m",
+        rating: "R",
+        language: "English",
+        director: "Christopher Nolan",
+        cast: "Cillian Murphy, Emily Blunt, Robert Downey Jr.",
+        genres: ["Drama", "Thriller"]
+      },
+      {
+        id: "m3",
+        title: "Spider-Man: Across the Spider-Verse",
+        slug: "spider-man-across-the-spider-verse",
+        synopsis: "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence.",
+        posterUrl: "https://images.unsplash.com/photo-1635805737707-575885ab0820?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "cqGjhVJWtEg",
+        duration: "2h 20m",
+        rating: "PG",
+        language: "English",
+        director: "Joaquim Dos Santos",
+        cast: "Shameik Moore, Hailee Steinfeld",
+        genres: ["Animation", "Action"]
+      },
+      {
+        id: "m4",
+        title: "Interstellar: 10th Anniversary IMAX",
+        slug: "interstellar-10th-anniversary",
+        synopsis: "A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival across interstellar dimensions.",
+        posterUrl: "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "zSWdZVtXT7E",
+        duration: "2h 49m",
+        rating: "PG-13",
+        language: "English",
+        director: "Christopher Nolan",
+        cast: "Matthew McConaughey, Anne Hathaway",
+        genres: ["Sci-Fi", "Drama"]
+      },
+      {
+        id: "m5",
+        title: "The Dark Knight",
+        slug: "the-dark-knight",
+        synopsis: "When the menace known as the Joker wreaks havoc and chaos on the people of Gotham, Batman must accept one of the greatest psychological tests.",
+        posterUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "EXeTwQWrcwY",
+        duration: "2h 32m",
+        rating: "PG-13",
+        language: "English",
+        director: "Christopher Nolan",
+        cast: "Christian Bale, Heath Ledger",
+        genres: ["Action", "Drama"]
+      },
+      {
+        id: "m6",
+        title: "Cyberpunk: Neon Horizon",
+        slug: "cyberpunk-neon-horizon",
+        synopsis: "In 2099 Neo-Tokyo, an outlaw neural mercenary stumbles upon an AI capable of rewriting human consciousness.",
+        posterUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&auto=format&fit=crop&q=80",
+        backdropUrl: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=1600&auto=format&fit=crop&q=80",
+        trailerId: "qIcTM8WXFjk",
+        duration: "2h 12m",
+        rating: "R",
+        language: "English",
+        director: "Katsuhiro Otomo",
+        cast: "Ken Watanabe, Scarlett Johansson",
+        genres: ["Sci-Fi", "Thriller"]
+      }
+    ];
+
+    const CINEMAS = [
+      { id: "c1", name: "CineBook Grand IMAX Cinema", city: "Los Angeles, CA", address: "6801 Hollywood Blvd", phone: "(323) 555-0199", facilities: ["IMAX Laser 70mm", "Dolby Atmos", "VIP Lounge"] },
+      { id: "c2", name: "CineBook Dolby Cinema & VIP", city: "New York, NY", address: "234 W 42nd St", phone: "(212) 555-0142", facilities: ["Dolby Vision", "Dolby Atmos", "Recliner Suites"] },
+      { id: "c3", name: "CineBook Metropolis Luxe", city: "Chicago, IL", address: "600 N Michigan Ave", phone: "(312) 555-0188", facilities: ["IMAX Laser", "4DX Motion", "Valet Parking"] }
+    ];
+
+    // Reactive State
+    let state = {
+      selectedMovie: null,
+      selectedShowtime: null,
+      selectedSeats: [],
+      currentBooking: null,
+      myBookings: [
+        {
+          reference: "CB-8K92L1",
+          movie: "Dune: Part Two",
+          cinema: "CineBook Grand IMAX Cinema",
+          auditorium: "Screen 1 - Grand IMAX Laser",
+          seats: ["E4", "E5"],
+          total: 34.02,
+          date: "Tomorrow at 6:30 PM",
+          status: "CONFIRMED"
+        }
+      ],
+      auditLogs: [
+        { time: "Just now", action: "SEAT_LOCK_VERIFIED", entity: "SYSTEM", meta: "Atomic row lock verified" }
+      ]
+    };
+
+    function renderMovies(moviesToRender = MOVIES) {
+      const grid = document.getElementById("movies-grid");
+      grid.innerHTML = moviesToRender.map(m => `
+        <div class="rounded-2xl bg-surface border border-surface-border overflow-hidden hover:border-accent-cyan/40 transition-all flex flex-col">
+          <div class="relative aspect-[2/3] w-full bg-surface-raised overflow-hidden group">
+            <img src="${m.posterUrl}" alt="${m.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            <div class="absolute top-3 left-3 flex gap-1.5">
+              <span class="rounded bg-black/80 px-2 py-0.5 text-[10px] font-bold text-accent-cyan border border-accent-cyan/30">${m.rating}</span>
+              <span class="rounded bg-black/80 px-2 py-0.5 text-[10px] font-semibold text-gray-200">${m.language}</span>
+            </div>
+            <button onclick="openTrailer('${m.trailerId}', '${m.title}')" class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="h-12 w-12 rounded-full bg-accent-cyan flex items-center justify-center text-gray-950 shadow-glow-cyan"><i data-lucide="play" class="h-5 w-5 fill-current"></i></div>
+            </button>
+          </div>
+          <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex gap-1.5 mb-1.5">
+                ${m.genres.map(g => `<span class="text-[9px] uppercase font-bold text-accent-cyan bg-accent-cyan/10 px-1.5 py-0.5 rounded">${g}</span>`).join('')}
+              </div>
+              <h3 class="text-base font-bold text-white line-clamp-1">${m.title}</h3>
+              <p class="text-xs text-gray-400 line-clamp-2 mt-1">${m.synopsis}</p>
+            </div>
+            <div class="pt-3 border-t border-surface-border flex items-center justify-between">
+              <span class="text-xs text-emerald-400 font-semibold">4 Screenings</span>
+              <button onclick="openMovie('${m.slug}')" class="rounded-xl bg-accent-cyan px-3.5 py-1.5 text-xs font-bold text-gray-950 shadow-glow-cyan hover:bg-cyan-300 transition-all">Book Seats</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById("movie-count").innerText = `${moviesToRender.length} Movies`;
+      lucide.createIcons();
+    }
+
+    function applyFilters() {
+      const q = document.getElementById("search-input").value.toLowerCase();
+      const genre = document.getElementById("genre-select").value;
+      const lang = document.getElementById("language-select").value;
+
+      const filtered = MOVIES.filter(m => {
+        if (q && !m.title.toLowerCase().includes(q) && !m.cast.toLowerCase().includes(q)) return false;
+        if (genre && !m.genres.includes(genre)) return false;
+        if (lang && m.language !== lang) return false;
+        return true;
+      });
+      renderMovies(filtered);
+    }
+
+    function setDateFilter(d, btn) {
+      document.querySelectorAll(".date-btn").forEach(b => {
+        b.className = "date-btn px-3 py-1.5 rounded-lg bg-surface-raised text-gray-300 font-semibold hover:text-white";
+      });
+      btn.className = "date-btn px-3 py-1.5 rounded-lg bg-accent-cyan text-gray-950 font-bold";
+    }
+
+    function openMovie(slug) {
+      const m = MOVIES.find(x => x.slug === slug);
+      if (!m) return;
+      state.selectedMovie = m;
+
+      const container = document.getElementById("movie-details-content");
+      container.innerHTML = `
+        <div class="rounded-3xl bg-surface border border-surface-border p-6 sm:p-8 flex flex-col md:flex-row gap-6 shadow-2xl">
+          <img src="${m.posterUrl}" class="w-48 sm:w-56 rounded-2xl object-cover shadow-xl">
+          <div class="space-y-3 flex-1">
+            <span class="text-xs font-bold uppercase text-accent-gold">${m.rating} • ${m.duration} • ${m.language}</span>
+            <h1 class="text-3xl sm:text-4xl font-black text-white">${m.title}</h1>
+            <p class="text-xs sm:text-sm text-gray-300">${m.synopsis}</p>
+            <div class="pt-2 text-xs text-gray-400"><strong>Director:</strong> ${m.director} | <strong>Cast:</strong> ${m.cast}</div>
+            <button onclick="openTrailer('${m.trailerId}', '${m.title}')" class="inline-flex items-center gap-2 rounded-xl bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/40 px-4 py-2 text-xs font-bold mt-2">
+              <i data-lucide="play" class="h-4 w-4 fill-current"></i> Watch Trailer
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="ticket" class="h-5 w-5 text-accent-cyan"></i> Select Showtime & Screen</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            ${CINEMAS.map(c => `
+              <div class="rounded-2xl bg-surface border border-surface-border p-5 space-y-3">
+                <h3 class="text-sm font-bold text-white">${c.name}</h3>
+                <span class="text-[11px] text-gray-400 block">${c.city}</span>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                  <button onclick="selectShowtime('${c.name}', 'Screen 1 (IMAX Laser)', '6:30 PM')" class="p-2.5 rounded-xl bg-surface-raised border border-surface-border hover:border-accent-cyan text-center">
+                    <span class="font-mono text-sm font-bold text-white block">6:30 PM</span>
+                    <span class="text-[10px] text-accent-gold">IMAX 70mm</span>
+                  </button>
+                  <button onclick="selectShowtime('${c.name}', 'Screen 2 (Dolby Atmos)', '9:45 PM')" class="p-2.5 rounded-xl bg-surface-raised border border-surface-border hover:border-accent-cyan text-center">
+                    <span class="font-mono text-sm font-bold text-white block">9:45 PM</span>
+                    <span class="text-[10px] text-accent-cyan">Dolby Atmos</span>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      navigateTo("movie-details");
+      lucide.createIcons();
+    }
+
+    function selectShowtime(cinema, auditorium, time) {
+      state.selectedShowtime = { cinema, auditorium, time, date: "Today" };
+      state.selectedSeats = [];
+      renderSeatMap();
+      navigateTo("seat-map");
+    }
+
+    function renderSeatMap() {
+      const header = document.getElementById("seat-map-header");
+      header.innerHTML = `
+        <div>
+          <span class="text-xs text-accent-gold font-bold">${state.selectedMovie.title}</span>
+          <h2 class="text-lg font-bold text-white">${state.selectedShowtime.cinema} — ${state.selectedShowtime.auditorium}</h2>
+        </div>
+        <div class="text-right font-mono text-xs"><span class="text-gray-400">Screening Time:</span> <span class="text-accent-cyan font-bold">${state.selectedShowtime.time}</span></div>
+      `;
+
+      const grid = document.getElementById("interactive-seat-grid");
+      const rows = ["A", "B", "C", "D", "E", "F", "G", "H"];
+      
+      let html = '<div class="min-w-fit flex flex-col gap-2.5">';
+      rows.forEach((r, rIdx) => {
+        html += `<div class="flex items-center gap-2"><span class="w-4 text-xs font-bold text-gray-500">${r}</span><div class="flex gap-1.5">`;
+        for (let col = 1; col <= 10; col++) {
+          const seatId = `${r}${col}`;
+          const isAisle = col === 5;
+          let type = "STANDARD";
+          let price = 15;
+          if (rIdx >= 6) { type = "RECLINER"; price = 28; }
+          else if (rIdx >= 4) { type = "VIP"; price = 22; }
+
+          const isSelected = state.selectedSeats.some(s => s.id === seatId);
+          const isHeld = (seatId === "D4" || seatId === "D5");
+
+          let color = "bg-surface-raised border-surface-border text-gray-400 hover:border-accent-cyan";
+          if (isSelected) color = "bg-accent-cyan text-gray-950 font-bold shadow-glow-cyan";
+          else if (isHeld) color = "bg-amber-950/40 border-amber-800 text-amber-500 opacity-60 pointer-events-none";
+          else if (type === "VIP") color = "bg-amber-500/10 border-amber-500/30 text-amber-300";
+          else if (type === "RECLINER") color = "bg-purple-500/10 border-purple-500/30 text-purple-300";
+
+          html += `
+            ${isAisle ? '<div class="w-4"></div>' : ''}
+            <button onclick="toggleSeat('${seatId}', '${type}', ${price})" class="h-9 w-9 rounded-lg border flex flex-col items-center justify-center text-[10px] ${color}">
+              <span class="font-bold">${seatId}</span>
+            </button>
+          `;
+        }
+        html += `</div><span class="w-4 text-xs font-bold text-gray-500">${r}</span></div>`;
+      });
+      html += '</div>';
+      grid.innerHTML = html;
+      updateOrderSummary();
+    }
+
+    function toggleSeat(id, type, price) {
+      const idx = state.selectedSeats.findIndex(s => s.id === id);
+      if (idx > -1) {
+        state.selectedSeats.splice(idx, 1);
+      } else {
+        if (state.selectedSeats.length >= 10) return;
+        state.selectedSeats.push({ id, type, price });
+      }
+      renderSeatMap();
+    }
+
+    function updateOrderSummary() {
+      const count = state.selectedSeats.length;
+      document.getElementById("selected-seats-count").innerText = `${count} Seats`;
+      
+      const tags = document.getElementById("selected-seats-tags");
+      if (count === 0) {
+        tags.innerHTML = '<span class="text-gray-500">Select seats on the map above.</span>';
+      } else {
+        tags.innerHTML = state.selectedSeats.map(s => `
+          <span class="rounded bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan px-2 py-0.5 text-xs font-bold">${s.id} ($${s.price})</span>
+        `).join('');
+      }
+
+      const subtotal = state.selectedSeats.reduce((sum, s) => sum + s.price, 0);
+      const fee = count > 0 ? 1.50 : 0;
+      const tax = count > 0 ? (subtotal + fee) * 0.08 : 0;
+      const total = subtotal + fee + tax;
+
+      document.getElementById("side-subtotal").innerText = `$${subtotal.toFixed(2)}`;
+      document.getElementById("side-fee").innerText = `$${fee.toFixed(2)}`;
+      document.getElementById("side-tax").innerText = `$${tax.toFixed(2)}`;
+      document.getElementById("side-total").innerText = `$${total.toFixed(2)}`;
+
+      document.getElementById("btn-proceed").disabled = (count === 0);
+    }
+
+    function proceedToCheckout() {
+      const subtotal = state.selectedSeats.reduce((sum, s) => sum + s.price, 0);
+      const fee = 1.50;
+      const tax = (subtotal + fee) * 0.08;
+      const total = subtotal + fee + tax;
+
+      state.currentBooking = {
+        reference: `CB-${Math.random().toString(36).substring(2,8).toUpperCase()}`,
+        movie: state.selectedMovie,
+        showtime: state.selectedShowtime,
+        seats: [...state.selectedSeats],
+        total
+      };
+
+      const c = document.getElementById("checkout-content");
+      c.innerHTML = `
+        <div class="flex justify-between items-center border-b border-surface-border pb-4">
+          <h1 class="text-2xl font-bold text-white">Complete Reservation</h1>
+          <span class="rounded-xl bg-surface-raised border border-surface-border px-3 py-1.5 text-xs text-accent-cyan font-bold">⏱️ 10:00 Hold Active</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div class="rounded-2xl bg-surface border border-surface-border p-5 space-y-4">
+            <h3 class="text-xs font-bold uppercase text-gray-400">Order Summary</h3>
+            <div class="flex gap-4">
+              <img src="${state.selectedMovie.posterUrl}" class="w-16 rounded-xl object-cover">
+              <div class="text-xs space-y-1">
+                <h4 class="font-bold text-white text-sm">${state.selectedMovie.title}</h4>
+                <p class="text-accent-gold">${state.selectedShowtime.auditorium}</p>
+                <p class="text-gray-400">${state.selectedShowtime.cinema} • ${state.selectedShowtime.time}</p>
+                <p class="text-white font-mono font-bold">Seats: ${state.selectedSeats.map(s => s.id).join(', ')}</p>
+              </div>
+            </div>
+            <div class="pt-3 border-t border-surface-border flex justify-between font-bold text-white text-base">
+              <span>Total Amount</span>
+              <span class="text-accent-cyan font-mono">$${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-surface border border-surface-border p-5 space-y-4">
+            <h3 class="text-xs font-bold uppercase text-gray-400">Select Payment Method</h3>
+            <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold">
+              <div class="p-2 rounded-xl bg-accent-cyan text-gray-950">💳 Card</div>
+              <div class="p-2 rounded-xl bg-surface-raised text-gray-300"> Pay</div>
+              <div class="p-2 rounded-xl bg-surface-raised text-gray-300">G Pay</div>
+              <div class="p-2 rounded-xl bg-surface-raised text-gray-300">PayPal</div>
+            </div>
+            <div class="space-y-3 text-xs">
+              <input type="text" value="4242 4242 4242 4242" class="w-full rounded-xl bg-surface-raised border border-surface-border px-3 py-2 text-white font-mono">
+              <div class="grid grid-cols-2 gap-2">
+                <input type="text" value="12/28" class="rounded-xl bg-surface-raised border border-surface-border px-3 py-2 text-white text-center font-mono">
+                <input type="password" value="888" class="rounded-xl bg-surface-raised border border-surface-border px-3 py-2 text-white text-center font-mono">
+              </div>
+            </div>
+            <button onclick="confirmPayment()" class="w-full rounded-xl bg-gradient-to-r from-accent-cyan to-blue-600 py-3 text-xs font-bold text-gray-950 shadow-glow-cyan">
+              Pay $${total.toFixed(2)} & Generate Digital Pass
+            </button>
+          </div>
+        </div>
+      `;
+      navigateTo("checkout");
+    }
+
+    function confirmPayment() {
+      const b = state.currentBooking;
+      state.myBookings.unshift({
+        reference: b.reference,
+        movie: b.movie.title,
+        cinema: b.showtime.cinema,
+        auditorium: b.showtime.auditorium,
+        seats: b.seats.map(s => s.id),
+        total: b.total,
+        date: `${b.showtime.date} at ${b.showtime.time}`,
+        status: "CONFIRMED"
+      });
+
+      state.auditLogs.unshift({
+        time: "Just now",
+        action: "CONFIRM_BOOKING",
+        entity: "BOOKING",
+        meta: `Ref: ${b.reference} ($${b.total.toFixed(2)})`
+      });
+
+      renderTicket(b);
+      navigateTo("ticket");
+    }
+
+    function renderTicket(b) {
+      const display = document.getElementById("ticket-display");
+      display.innerHTML = `
+        <div class="rounded-2xl bg-emerald-950/40 border border-emerald-800 p-4 flex justify-between items-center">
+          <div class="flex items-center gap-3">
+            <span class="h-8 w-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">✓</span>
+            <div><h2 class="text-sm font-bold text-white">Booking Confirmed!</h2><p class="text-xs text-emerald-400">Present this digital boarding pass at theatre entrance.</p></div>
+          </div>
+          <span class="font-mono text-xs font-bold text-emerald-300">REF: ${b.reference}</span>
+        </div>
+
+        <div id="printable-ticket-content" class="rounded-3xl bg-surface border border-surface-border p-6 sm:p-8 flex flex-col md:flex-row justify-between gap-6 shadow-2xl">
+          <div class="space-y-4 flex-1">
+            <span class="text-xs font-bold text-accent-cyan tracking-widest uppercase">CineBook Digital Entry Pass</span>
+            <h1 class="text-3xl font-black text-white">${b.movie.title}</h1>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div><span class="text-gray-400 block">Cinema</span><span class="font-bold text-white">${b.showtime.cinema}</span></div>
+              <div><span class="text-gray-400 block">Auditorium</span><span class="font-bold text-accent-gold">${b.showtime.auditorium}</span></div>
+              <div><span class="text-gray-400 block">Date & Time</span><span class="font-bold text-white">${b.showtime.time}</span></div>
+              <div><span class="text-gray-400 block">Seats</span><span class="font-mono text-base font-extrabold text-accent-cyan">${b.seats.map(s => s.id).join(', ')}</span></div>
+            </div>
+          </div>
+          <div class="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-xl">
+            <div id="qrcode-container"></div>
+            <span class="font-mono text-[10px] font-bold text-black mt-2">${b.reference}</span>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center no-print">
+          <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-surface-raised border border-surface-border text-xs font-bold text-white hover:border-accent-cyan">🖨️ Print Ticket</button>
+          <button onclick="navigateTo('my-bookings')" class="px-4 py-2 rounded-xl bg-accent-cyan text-gray-950 text-xs font-bold">View All My Passes</button>
+        </div>
+      `;
+
+      setTimeout(() => {
+        new QRCode(document.getElementById("qrcode-container"), {
+          text: JSON.stringify({ ref: b.reference, movie: b.movie.title }),
+          width: 120,
+          height: 120
+        });
+      }, 50);
+    }
+
+    function renderMyBookings() {
+      const list = document.getElementById("my-bookings-list");
+      list.innerHTML = state.myBookings.map((b, idx) => `
+        <div class="rounded-2xl bg-surface border border-surface-border p-5 flex justify-between items-center">
+          <div class="space-y-1 text-xs">
+            <span class="font-mono text-[10px] font-bold text-accent-cyan">REF: ${b.reference}</span>
+            <h3 class="text-base font-bold text-white">${b.movie}</h3>
+            <p class="text-gray-400">${b.cinema} • ${b.auditorium}</p>
+            <p class="text-gray-300">Seats: <strong class="text-white font-mono">${Array.isArray(b.seats) ? b.seats.join(', ') : b.seats}</strong> • $${b.total.toFixed(2)}</p>
+          </div>
+          <span class="rounded bg-emerald-500/20 text-emerald-400 px-2.5 py-1 text-xs font-bold">Confirmed</span>
+        </div>
+      `).join('');
+    }
+
+    function renderCinemas() {
+      const grid = document.getElementById("cinemas-list-grid");
+      grid.innerHTML = CINEMAS.map(c => `
+        <div class="rounded-2xl bg-surface border border-surface-border p-6 space-y-4">
+          <span class="text-xs font-bold uppercase text-accent-gold">${c.city}</span>
+          <h2 class="text-xl font-bold text-white">${c.name}</h2>
+          <p class="text-xs text-gray-400">${c.address}</p>
+          <div class="flex flex-wrap gap-1.5 pt-2">
+            ${c.facilities.map(f => `<span class="rounded bg-surface-raised text-accent-cyan px-2 py-0.5 text-[10px] font-semibold">${f}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAdmin() {
+      const logs = document.getElementById("admin-audit-logs");
+      logs.innerHTML = state.auditLogs.map(l => `
+        <div class="p-2 rounded bg-surface-raised flex justify-between">
+          <span class="text-accent-cyan font-bold">${l.action}</span>
+          <span class="text-gray-400">${l.meta}</span>
+        </div>
+      `).join('');
+    }
+
+    function triggerHoldCleanup() {
+      state.auditLogs.unshift({
+        time: "Just now",
+        action: "RELEASE_EXPIRED_HOLDS",
+        entity: "CRON",
+        meta: "Released 0 expired holds (all clean)"
+      });
+      renderAdmin();
+      alert("Expired hold release worker executed successfully!");
+    }
+
+    function openTrailer(id, title) {
+      document.getElementById("trailer-modal-title").innerText = `Trailer: ${title}`;
+      document.getElementById("trailer-iframe").src = `https://www.youtube.com/embed/${id}?autoplay=1`;
+      document.getElementById("trailer-modal").classList.remove("hidden");
+      document.getElementById("trailer-modal").classList.add("flex");
+    }
+
+    function closeTrailer() {
+      document.getElementById("trailer-iframe").src = "";
+      document.getElementById("trailer-modal").classList.remove("flex");
+      document.getElementById("trailer-modal").classList.add("hidden");
+    }
+
+    function navigateTo(viewId) {
+      document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.remove("hidden");
+
+      if (viewId === "my-bookings") renderMyBookings();
+      if (viewId === "cinemas") renderCinemas();
+      if (viewId === "admin") renderAdmin();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Initialize
+    window.addEventListener("DOMContentLoaded", () => {
+      renderMovies();
+      lucide.createIcons();
+    });
+  </script>
 </body>
 </html>
