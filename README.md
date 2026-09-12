@@ -13,27 +13,27 @@
 ## 👥 Multi-Agent Architecture (Team CineBook)
 
 ```mermaid
-graph LR
-    subgraph "Agent 1: App Agent"
-        UI[Cinematic UI / App Router]
-        SEAT[Interactive Seat Map]
-        PAY[Idempotent Checkout]
-        QR[Digital QR Tickets]
-        ADM[Admin Operations Portal]
+flowchart LR
+    subgraph A1["Agent 1: App Agent"]
+        UI["Cinematic UI & App Router"]
+        SEAT["Interactive Seat Map"]
+        PAY["Idempotent Checkout"]
+        QR["Digital QR Tickets"]
+        ADM["Admin Operations Portal"]
     end
 
-    subgraph "Agent 2: Database Engine Agent"
-        SCHEM[14 PostgreSQL Tables]
-        TX[Row-Level Locks FOR UPDATE]
-        HOLD[10-Min Temporary Holds]
-        CRON[Idempotent Hold Cleanup]
+    subgraph A2["Agent 2: Database Engine Agent"]
+        SCHEM["14 PostgreSQL Tables"]
+        TX["Row-Level Locks FOR UPDATE"]
+        HOLD["10-Min Temporary Holds"]
+        CRON["Idempotent Hold Cleanup"]
     end
 
-    subgraph "Agent 3: QA Agent"
-        TEST_AUTH[Auth & JWT Verification]
-        TEST_CONC[Concurrency Collision Tests]
-        TEST_EXP[Hold Expiration Tests]
-        TEST_SEC[Security Isolation Tests]
+    subgraph A3["Agent 3: QA Agent"]
+        TEST_AUTH["Auth & JWT Verification"]
+        TEST_CONC["Concurrency Collision Tests"]
+        TEST_EXP["Hold Expiration Tests"]
+        TEST_SEC["Security Isolation Tests"]
     end
 
     UI --> TX
